@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 )
 
 func main() {
@@ -34,6 +35,9 @@ func main() {
 		tcpSegments[i] = ReadTCPSegment(p.Data)
 	}
 	fmt.Println("TCP segments!")
+	sort.Slice(tcpSegments, func(i, j int) bool {
+		return tcpSegments[i].Header.SequenceNumber < tcpSegments[j].Header.SequenceNumber
+	})
 	for _, s := range tcpSegments {
 		fmt.Printf("sourcePort: %d, destPort: %d, headerLength: %d words, sequence number: %d\n", s.Header.SourcePort, s.Header.DestinationPort, s.Header.DataOffset, s.Header.SequenceNumber)
 	}
