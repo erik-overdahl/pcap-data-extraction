@@ -23,6 +23,12 @@ func main() {
 
 	fmt.Printf("Found %d packets\n", len(file.Packets))
 	PrintEthernetHeadersInfo(ethernetFrames)
+
+	ipPackets := make([]*IPv4Packet, len(file.Packets))
+	for i, f := range ethernetFrames {
+		ipPackets[i] = ReadIPv4Packet(f.Payload)
+	}
+
 	fmt.Printf("")
 }
 
