@@ -1,0 +1,120 @@
+#+TITLE: Notes
+
+* Parsing the global pcap-savefile header
+#+begin_quote
+The per-file header length is 24 octets.
+#+end_quote
+
+#+begin_example
+00000000: d4c3 b2a1 0200 0400 0000 0000 0000 0000  ................
+00000010: ea05 0000 0100 0000 4098 d057 0a1f 0300  ........@..W....
+00000020: 4e00 0000 4e00 0000 c4e9 8487 6028 a45e  N...N.......`(.^
+00000030: 60df 2e1b 0800 4500 0040 d003 0000 4006  `.....E..@....@.
+00000040: 2cee c0a8 0065 c01e fc9a e79f 0050 5eab  ,....e.......P^.
+00000050: 2265 0000 0000 b002 ffff 5823 0000 0204  "e........X#....
+...
+#+end_example
+
+#+begin_quote
+All fields in the per-file header are in the byte order of the host
+writing the file. Normally, the first field in the per-file header  is a
+4-byte  magic number, with the value =0xa1b2c3d4=. The magic number, when
+read by a host with the same byte order as the host that wrote the file,
+will have the value =0xa1b2c3d4=, and, when read by a host with the
+opposite byte order as the host that wrote the file, will have the value
+=0xd4c3b2a1=. That allows software reading the file to determine whether
+the byte order of the host that wrote the file is the same as the byte
+order of the host on which the file is being read, and thus whether the
+values in the per-file and per-packet headers need to be byte-swapped.
+
+If the magic number has the value =0xa1b23c4d= (with the two nibbles of
+the two lower-order bytes of the magic number swapped), which would be
+read as =0xa1b23c4d= by a host with the same byte order as the host that
+wrote the file and as =0x4d3cb2a1= by a host with the opposite byte order
+as the host that wrote the file, the file format is the same as for
+regular files, except that the time stamps for packets are given in
+seconds and nanoseconds rather than seconds and microseconds.
+#+end_quote
+
+#+begin_quote
+Following this are:
+
+    A 2-byte file format major version number; the current version
+    number is 2.
+
+    A 2-byte file format minor version number; the current version
+    number is 4.
+
+    A 4-byte time zone offset; this is always 0.
+
+    A 4-byte number giving the accuracy of time stamps in the file;
+    this is always 0.
+
+    A 4-byte number giving the "snapshot length"  of the capture;
+    packets longer than the snapshot length are truncated to the
+    snapshot length, so that, if the snapshot length is N, only the
+    first N  bytes of a packet longer than N bytes will be saved in
+    the capture.
+
+    a 4-byte number giving the link-layer header type for packets in
+    the capture; see pcap-linktype(7) for the LINKTYPE_ values that
+    can appear in this field.
+#+end_quote
+
+#+begin_example
+00000000:           0200 0400 0000 0000 0000 0000  ................
+00000010: ea05 0000 0100 0000                      ........@..W....
+#+end_example
+
+| field          | hex         |  dec |
+|----------------+-------------+------|
+| major version  | 0x0002      |    2 |
+| minor version  | 0x0004      |    4 |
+| TZ offset      | 0x0000 0000 |    0 |
+| TZ accuracy    | 0x0000 0000 |    0 |
+| snapshot len   | 0x0000 05ea | 1514 |
+| lik-layer type | 0x0000 0001 |    1 |
+
+* Example of a per-packet header
+#+begin_quote
+Following the per-file header are zero or more packets; each packet
+begins with a per-packet header, which is immediately followed by the
+raw packet data. The format of the per-packet header is:
+
+        ┌──────────────────────────────────────────────┐
+        │          Time stamp, seconds value           │
+        ├──────────────────────────────────────────────┤
+        │Time stamp, microseconds or nanoseconds value │
+        ├──────────────────────────────────────────────┤
+        │       Length of captured packet data         │
+        ├──────────────────────────────────────────────┤
+        │   Un-truncated length of the packet data     │
+        └──────────────────────────────────────────────┘
+The per-packet header length is 16 octets.
+
+All fields in the per-packet header are in the byte order of the host
+writing the file.  The per-packet header begins with a time stamp giving
+the approximate time the packet was captured; the time stamp consists of
+a  4-byte value, giving the time in seconds since January 1, 1970,
+00:00:00 UTC, followed by a 4-byte value, giving the time in
+microseconds or nanoseconds since that second, depending on the magic
+number in the file header. Following that are a 4-byte value giving the
+number of bytes of captured data that follow the per-packet header and a
+4-byte value giving the number of bytes that would have been present had
+the packet not been truncated by the snapshot length. The two lengths
+will be equal if the number of bytes of packet data are less than or
+equal to the snapshot length.
+#+end_quote
+
+#+begin_example
+00000010:                     4098 d057 0a1f 0300  ........@..W....
+00000020: 4e00 0000 4e00 0000                      N...N.......`(.^
+#+end_example
+
+| field           | hex         |        dec |
+|-----------------+-------------+------------|
+| seconds         | 0x57d0 9840 | 1473288256 |
+| microseconds    | 0x0003 1f0a |     204554 |
+| truncated len   | 0x0000 004e |         78 |
+| untruncated len | 0x0000 004e |         78 |
+
