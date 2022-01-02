@@ -29,6 +29,15 @@ func main() {
 		ipPackets[i] = ReadIPv4Packet(f.Payload)
 	}
 
+	tcpSegments := make([]*TCPSegment, len(file.Packets))
+	for i, p := range ipPackets {
+		tcpSegments[i] = ReadTCPSegment(p.Data)
+	}
+	fmt.Println("TCP segments!")
+	for _, s := range tcpSegments {
+		fmt.Printf("sourcePort: %d, destPort: %d, headerLength: %d words, sequence number: %d\n", s.Header.SourcePort, s.Header.DestinationPort, s.Header.DataOffset, s.Header.SequenceNumber)
+	}
+
 	fmt.Printf("")
 }
 
