@@ -66,14 +66,14 @@ Following this are:
 00000010: ea05 0000 0100 0000                      ........@..W....
 #+end_example
 
-| field          | hex         |  dec |
-|----------------+-------------+------|
-| major version  | 0x0002      |    2 |
-| minor version  | 0x0004      |    4 |
-| TZ offset      | 0x0000 0000 |    0 |
-| TZ accuracy    | 0x0000 0000 |    0 |
-| snapshot len   | 0x0000 05ea | 1514 |
-| lik-layer type | 0x0000 0001 |    1 |
+| field           | hex         |  dec |
+|-----------------+-------------+------|
+| major version   | 0x0002      |    2 |
+| minor version   | 0x0004      |    4 |
+| TZ offset       | 0x0000 0000 |    0 |
+| TZ accuracy     | 0x0000 0000 |    0 |
+| snapshot len    | 0x0000 05ea | 1514 |
+| link-layer type | 0x0000 0001 |    1 |
 
 * Example of a per-packet header
 #+begin_quote
@@ -118,3 +118,70 @@ equal to the snapshot length.
 | truncated len   | 0x0000 004e |         78 |
 | untruncated len | 0x0000 004e |         78 |
 
+* Parsing an ethernet frame header
+The ethernet frame is read (I believe) at the hardware level (the
+physical layer), and then the data link layer is made available in
+software.
+
+From the assignment:
+#+begin_quote
+We are only able to capture the portion of an Ethernet frame that the
+network interface controller makes available to the operating system. In
+our case, this excludes the preamble, start of frame delimiter and frame
+check sequence.
+#+end_quote
+
+So we are only looking at the [[https://en.wikipedia.org/wiki/Ethernet_frame#Frame_%E2%80%93_data_link_layer][Frame - data link layer]] portion of the
+Wikipedia page, minus the frame check sequence.
+
+#+begin_quote
+The header features destination and source MAC addresses (each six
+octets in length), the EtherType field and, optionally, an IEEE 802.1Q
+tag or IEEE 802.1ad tag.
+
+The EtherType field is two octets long and it can be used for two
+different purposes. Values of 1500 and below mean that it is used to
+indicate the size of the payload in octets, while values of 1536 and
+above indicate that it is used as an EtherType, to indicate which
+protocol is encapsulated in the payload of the frame. When used as
+EtherType, the length of the frame is determined by the location of the
+interpacket gap and valid frame check sequence (FCS).
+
+The IEEE 802.1Q tag or IEEE 802.1ad tag, if present, is a four-octet
+field that indicates virtual LAN (VLAN) membership and IEEE 802.1p
+priority. The first two octets of the tag are called the Tag Protocol
+IDentifier (TPID) and double as the EtherType field indicating that the
+frame is either 802.1Q or 802.1ad tagged. 802.1Q uses a TPID of 0x8100.
+802.1ad uses a TPID of 0x88a8.
+#+end_quote
+
+#+begin_example
+00000020:                    c4e9 8487 6028 a45e  N...N.......`(.^
+00000030: 60df 2e1b 0800
+#+end_example
+
+Do we need to worry about byte ordering?
+
+#+begin_quote
+IEEE 802.3 Clause 3:
+
+    Each octet is transmitted least significant bit (LSB) first (right
+    to left in normal writing order). (3.2.3)
+
+    For multi-octet/bytes fields, the most significant octet is
+    transmitted first (big-endian or left to right in normal writing
+    order). (3.2.6)
+#+end_quote
+
+No, just use big-endian
+
+| field       | hex              |
+|-------------+------------------|
+| destination | 0xc4e9 8487 6028 |
+| source      | 0xa45e 60df 2e1b |
+| ether type  | 0x0800           |
+
+The ether type is 0x0800, which is 2048 in decimal, meaning that it
+indicates which protocol is encoded in the frame's payload. The value
+0x0800 indicates an IPv4 datagram, and that the frame does not contain
+a IEEE 802.1Q tag or a IEEE 802.1ad tag.

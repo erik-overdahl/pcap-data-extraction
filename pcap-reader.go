@@ -89,17 +89,6 @@ func MakePCapReader(contents []byte) *PCapReader {
 	return &PCapReader{0, fileByteOrder, contents}
 }
 
-func ReadPCapFile(contents []byte) *PCapSavefile {
-	r := MakePCapReader(contents)
-	header := r.ReadPCapGlobalHeader()
-	file := &PCapSavefile{header, []*PCapPacket{}}
-	for r.RemainingBytes() > 16 {
-		packet := r.ReadPCapPacket()
-		file.Packets = append(file.Packets, packet)
-	}
-	return file
-}
-
 func fileByteOrderMatchesHost(contents []byte) bool {
 	var magicNumber uint32
 	byteOrder := hostByteOrder()
