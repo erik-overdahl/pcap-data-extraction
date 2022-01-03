@@ -48,28 +48,28 @@ func ParseTCPHeader(data []byte) TCPHeader {
 	if data[12]&0x1 == 1 {
 		h.NS = true
 	}
-	if data[13]&0x80 == 1 {
+	if (data[13]>>7)&1 == 1 {
 		h.CWR = true
 	}
-	if data[13]&0x40 == 1 {
+	if (data[13]>>6)&1 == 1 {
 		h.ECE = true
 	}
-	if data[13]&0x20 == 1 {
+	if (data[13]>>5)&1 == 1 {
 		h.URG = true
 	}
-	if data[13]&0x10 == 1 {
+	if (data[13]>>4)&1 == 1 {
 		h.ACK = true
 	}
-	if data[13]&0x8 == 1 {
+	if (data[13]>>3)&1 == 1 {
 		h.PSH = true
 	}
-	if data[13]&0x4 == 1 {
+	if (data[13]>>2)&1 == 1 {
 		h.RST = true
 	}
-	if data[13]&0x2 == 1 {
+	if (data[13]>>1)&1 == 1 {
 		h.SYN = true
 	}
-	if data[13]&0x2 == 1 {
+	if data[13]&1 == 1 {
 		h.FIN = true
 	}
 	h.WindowSize = uint16(data[14])<<8 | uint16(data[15])
