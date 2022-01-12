@@ -1,5 +1,9 @@
 #+TITLE: Notes
 
+How to extract this image from a pcap file
+
+[[file:out.jpeg]]
+
 * Parsing the global pcap-savefile header
 #+begin_quote
 The per-file header length is 24 octets.
@@ -185,3 +189,29 @@ The ether type is 0x0800, which is 2048 in decimal, meaning that it
 indicates which protocol is encoded in the frame's payload. The value
 0x0800 indicates an IPv4 datagram, and that the frame does not contain
 a IEEE 802.1Q tag or a IEEE 802.1ad tag.
+
+* Ordering TCP segments
+TCP segments are ordered by sequence number. During the handshake, the
+sequence number is incremented by 1. Later packets increment the
+sequence number by the number of bytes in the segment. The other side
+can then easily acknowledge that it received that many bytes by sending
+back the correct sequence number.
+
+Many of the packets in this file seem to be retranmissions - the server
+or client didn't get a response within some amount of time, so it sent
+the same segment again. I thought that you could detect retransmissions
+by just checking if the sequence number is lower than the one you
+expect for each packet, but a quick survey of the Wireshark
+documentation shows that it isn't that easy. And also for the pirposes
+of reconstructing this image, we don't really need to identify
+retransmissions. We just need to keep the first instance of the segment
+and ignore any duplicates.
+
+Maintain a map of sequence numbers to segments to get the unique
+segments, get the keys of that map as a slice, and use ~sort.Slice()~.
+No need to overcomplicate.
+
+* Parsing HTTP headers
+This is just unecessary here - we don't care about the headers, we just
+want the data. So get the raw data from the segments, concatenate into a
+byte array, split on the HTTP header delimiter =\r\n\r\n=, and call it good

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"sort"
@@ -30,19 +31,37 @@ func main() {
 		ipPackets[i] = ReadIPv4Packet(f.Payload)
 	}
 
-	tcpSegments := make([]*TCPSegment, len(file.Packets))
-	for i, p := range ipPackets {
-		tcpSegments[i] = ReadTCPSegment(p.Data)
-	}
-	fmt.Println("TCP segments!")
-	sort.Slice(tcpSegments, func(i, j int) bool {
-		return tcpSegments[i].Header.SequenceNumber < tcpSegments[j].Header.SequenceNumber
-	})
-	for _, s := range tcpSegments {
-		fmt.Printf("sourcePort: %d, destPort: %d, headerLength: %d words, sequence number: %d\n", s.Header.SourcePort, s.Header.DestinationPort, s.Header.DataOffset, s.Header.SequenceNumber)
+	// the client has to initiate the connection
+	// this assumes that the capture file is complete and
+	// that the first packet is the start of the connection
+	clientIp := ipPackets[0].Header.Source
+
+	serverResponses := []*TCPSegment{}
+	seqNums := make(map[uint32]bool)
+	for _, p := range ipPackets {
+		s := ReadTCPSegment(p.Data)
+		if !seqNums[s.Header.SequenceNumber] && p.Header.Destination == clientIp {
+			seqNums[s.Header.SequenceNumber] = true
+			serverResponses = append(serverResponses, s)
+		}
 	}
 
-	fmt.Printf("")
+	sort.Slice(serverResponses, func(i, j int) bool {
+		return serverResponses[i].Header.SequenceNumber < serverResponses[j].Header.SequenceNumber
+	})
+
+	values := make([][]byte, len(serverResponses))
+	for i, r := range serverResponses {
+		values[i] = r.Data
+	}
+	rawHttpResponse := bytes.Join(values, []byte{})
+	pieces := bytes.SplitN(rawHttpResponse, []byte{'\r', '\n', '\r', '\n'}, 2)
+	fmt.Printf("%s\n", string(pieces[0]))
+	err := os.WriteFile("out.jpeg", pieces[1], 0644)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Wrote image to file!\n")
 }
 
 func PrintEthernetHeadersInfo(frames []*EthernetFrame) {
